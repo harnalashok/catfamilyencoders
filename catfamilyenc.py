@@ -1,4 +1,21 @@
 # 25th May, 2023
+"""
+https://stackoverflow.com/a/30267328
+https://stackoverflow.com/a/5551499
+https://stackoverflow.com/a/27928411
+https://stackoverflow.com/a/27975633
+https://stackoverflow.com/a/67453488
+https://github.com/scikit-learn/scikit-learn/blob/9aaed4987/sklearn/tree/_classes.py#L595
+
+https://github.com/scikit-learn-contrib/project-template
+https://scikit-learn.org/stable/developers/utilities.html#validation-tools
+
+https://scikit-learn.org/stable/auto_examples/cluster/plot_inductive_clustering.html#sphx-glr-auto-examples-cluster-plot-inductive-clustering-py
+
+
+"""
+
+
 
 # 1.0 Libraries
 import pandas as pd
@@ -31,12 +48,8 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
     def __init__(self,  pathToStoreProgress = None, modelsPath= None,
                  cMeasures=[1,1,1,0,None,1,1],  noOfColsToConcat = 2, 
                  k = None, n_iter = 1, sampsize= 0.8, avg = True,
-                 saveGraph = False, verbose = 3):
+                 saveGraph = False, cutoff = 10, verbose = 3):
         """
-        Desc
-        ----
-        Use network analysis to encode categorical features in different 
-        but related ways. 
 
         Parameters
         ----------
@@ -49,8 +62,8 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
                      levels to difft centrality measures, per iteration, are saved 
                      here in .pkl file. Before saving, dictionaries are transformed
                      to pandas DataFrame and then saved. Such DataFrames are, at times,
-                     being called as models in this documentation. Default modelsPath  
-                     folder is <currentfolder>/allmodels/models/ 
+                     being called as models in this help. Default modelsPath folder is 
+                     <currentfolder>/allmodels/models/ 
         cMeasures : list; It specifies what all centrality measures are to be calculated.
                     One can also specify a function object that calculates some centrality
                     measure. The default cMeasures is [1,1,1,0,None,1,1].
@@ -78,24 +91,27 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
                            Presently only a value of 2 is allowed. That is, if there are 3 cat cols
                            ['a','b','c'] new concatenated cols will be: ['a+b', 'a+c', 'b+c']
 
-        k : int; If k is not None use k node samples to estimate betweenness centrality.
+        k : int; If k is not None use k node samples to estimate betweenness.
            The value of k <= n where n is the number of nodes in the graph.
            Higher values give better approximation. Only relevant if betweenness centrality
            is to be calculated.
            
-        n_iter : int; The number of times cMeasures are to be calculated over different
-                  samples of data. Default is 1 when cMeasures is calculated over complete data.
+        n_iter : int; The number of times cMeasures are to be calculated over different samples of data,
+                 Default is 1 when cMeasures is calculated over complete data.
                  
         sampsize : float; Sample size of data over which cMeasures to be calculated when n_iter > 1.
-                   The default is 0.8. Only relevant when n_iter > 1.
+                   The default is 0.8.
                    
         avg : boolean; When n_iter > 1, each one of cMeasures is calcuated n_iter times. To calculate
               a final value either average or median of each cMeasures is taken.
-              If avg is True (the default) then for each cMeasures (say, pagerank centrality)
+              If avg is True (the default) then for each cMeasures (say, pagerank Centrality)
               avg over all n_iter is taken; if False, median is computed.
               
-        saveGraph : boolean; Should network-graph files be saved to disk (in modelsPath) or not. 
+        saveGraph : boolean; Should network-graph files be saved to disk or not. 
                     The default is False.
+                    
+        cutoff: int; If number of levels in any one of the cat columns (or concatenated cat
+                cols) are below cutoff, ignore that cat col. (see _cleanup())
                     
         verbose : int; Intensity of msgs to be displayed. Presently, this parameter may not 
                   display much control over display of msg(s). The default is 3.
@@ -119,6 +135,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         self.sampsize = sampsize # Ignored if n_iter = 1
         self.avg = True  # Ignored if n_iter = 1
         self.saveGraph = saveGraph  # Should graph objects be saved for later plotting
+        self.cutoff = cutoff
         self.verbose = verbose  # Presently unused
 
 
@@ -250,6 +267,8 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         self.encoding_ = True     # Transformer is fitted
         return self
     
+
+
             
         
     def _checkParamsIntegrity(self):
@@ -257,21 +276,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         Called by: fit()
         Calls: None  
         
-        Desc
-        ----
-        
         Checks if class parameters are correctly specified
-        
-        Parameters
-        ----------
-        
-        None.
-        
-        Returns
-        -------
-        
-        None
-        
         """
         assert self.n_iter > 0, "n_iter can not be 0. Default is 1."
         assert len(self.cat_cols) > 0, "cat_cols can not be empty"
@@ -293,6 +298,8 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         u = sum(self.cMeasures[:4]) + sum(self.cMeasures[5:])
         if self.cMeasures[4] is None:   # No function object specified
             assert u != 0 , "cMeasures improperly specified"
+            
+        assert self.cutoff > 0, "cutoff can not be 0 or negative. Default is 10."    
         return
         
         
@@ -302,9 +309,6 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         """
         Called by: fit()
         Calls: None
-        
-        Desc
-        ----
         
         Does X has any missing value?
         Raises an exception if it does
@@ -378,11 +382,6 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
        
         Called by: fit()
         Calls:     _createCatPairwiseCols()
-        
-        Desc
-        -----
-        
-        Creates concatenated columns in DataFrame
 
         Parameters
         ----------
@@ -407,7 +406,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
             # 6.1 Create new columns (combinations of cat columns) in train
             #     Of noOfColsToConcat
             X = self._createCatPairwiseCols(X)
-            # 6.12 New columns created. These columns must be later dropped
+            # 6.12 New columns created. These columns must be latter dropped
             nc = list(set(list(X.columns)).difference(set(current_train_columns_)))
             # 6.13 Revised cat cols (ie excluding hour etc)
         return X, nc
@@ -472,10 +471,8 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
            Including cMeasures in the tuple is a relic from
            the past when we had only functions and no python
            Class.
-           
         Parameters
         ----------
-        
         colNamesList: A list of DataFrame columns to be permuted
                 n: int; n-length tuples, all possible orderings, 
                    no repeated elements 
@@ -509,20 +506,17 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
     
    
     
-    def _cleanup(self, X , single_permute_list_, threshold = 10):
+    def _cleanup(self, X , single_permute_list_, ):
         """
-        Desc
-        ----
-        
         From every pair of columns of (colToProject,intermediaryCol),
         in the list, remove that pair where number of unique values 
-        in colToProject are below a threshold. default is 10.
+        in colToProject are below or equalto a cutoff. default is 10.
         
         Parameters
         ----------
         X : pandas DataFrame 
         single_permute_list_ : A list of tuples
-        threshold : int; Default is 10
+
 
         Returns
         -------
@@ -537,7 +531,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
             # get no of unique values in colToProject 
             n = X[i[0]].nunique()
             # Only if n exceeds a limit,
-            if n > threshold:
+            if n > self.cutoff:
                 # we will consider the tuple
                 mylist.append(i)
         return mylist
@@ -587,7 +581,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
            ]
             
         Third element in every tuple is cMeasures. Why? When we had only
-        functions and no python Class, we needed this IIIrd member.
+        functions and no python Class, we needed this IIIrd element.
         Presently this is redundant.           
        
         Returns
@@ -647,7 +641,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
 
 
 
-    
+    # Engineers features, transform train and test and save the transformational model.
     def _featureEngTrainTest(self,train,colToProject, intermediaryCol):
         """
         Called by:  _getStoreFeatures() 
@@ -655,16 +649,12 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         
         Desc
         -----    
-        
-        Engineers features, transforms train and saves the 
-        transformational model.
         The function calls _learn() to learn a model from 'train'. It then 
         calls _storeModel() or _storeModelComm() to save it for subsequent
-        use/transformations.
+        use.
         
         Parameters
         ----------
-        
         train: pandas DataFrame; train dataset without target. Used to learn 
                and create models
         colToProject: string; See project_bipartite_graph() for full desc. Also called
@@ -850,24 +840,13 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         Called by: _featureEngTrainTest()
         Calls    : None
         
-        Desc
-        -----
-        
-        Save 'model' to RAM (in a dict format) or disk
-        
         Parameters
         ----------
     
         model:  list; This object is a list of dictionaries.
                  For more information, please see
                  under _genModel(). Each dictionary
-                 maybe saved as a dataframe in a pkl file
-                 depending upon value of n_iter.
-                 
-        Returns
-        --------         
-        
-        None
+                 is saved as a dataframe in a pkl file.
 
         """
         # For dynamic variables.
@@ -939,31 +918,26 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         Called by : _featureEngTrainTest()
         Calls     : _toNetwork(), _projectBipartiteGraph(), _genModel()
         
-        
-        Desc
-        -----
-        _learn() first calls _toNetwork() and then _projectBipartiteGraph
-        to build a projected, unweighted, unipartite network. It then calls
-        _genModel(). And _genModel() calls _calCentralityMeasures() &
-        _calCommunities() to generate and store models.
-
-        The function transforms the bipartite network to unipartite network.
-        Builds a 'model' object of centrality measures. To know more about
-        the 'model' object, see help under _genModel().
-        The function also stores our graph related performance data
-        in file "networkPerformanceData.csv". 
-        
         Parameters
         ----------
         colToProject & 'intermediaryCol': 
                      string; Create a bipartite network from two columns of a DataFrame, 'df'.
                      Columns are 'colToProject' & 'intermediaryCol'. We may also
                      call them as 'bottom' column and 'top' column
-                     
-        Returns
-        -------             
-        A list of mixed types of pythom objects.
-        
+
+        Desc
+        -----
+            _learn() first calls _toNetwork() and then _projectBipartiteGraph
+            to build a projected, unweighted, unipartite network. It then calls
+            _genModel(). And _genModel() calls _calCentralityMeasures() &
+            _calCommunities() to generate and store models.
+    
+            The function transforms the bipartite network to unipartite network.
+            Builds a 'model' object of centrality measures. To know more about
+            the 'model' object, see help under _genModel().
+            The function also stores our graph related performance data
+            in file "networkPerformanceData.csv". This file is to be created
+            by the application that imports functions from network_features module.
     
         """
     
@@ -1569,7 +1543,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         Parameters
         ----------
         df : pandas DataFrame
-        y: numpy array or pandas Series; Target
+        y: pandas Series; Target
     
         Returns
         -------
@@ -1754,7 +1728,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
     
         
     
-    def vectorsToTSV(self,X, take_mean = False, saveVectorsToDisk = True,filepath = None ):
+    def vectorsToTSV(self,X, take_mean = False, saveVectorsToDisk = True, filepath = None ):
         """
         Calls: _getCatVectors()
         Called by: main() when needed
@@ -1807,12 +1781,36 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         """
         # Check if X has a 'target' column
         j = list(X.columns)
+        
         if not 'target' in j:
             raise ValueError("Passed DataFrame does not contain 'target' column even if dummy!")
-        
             
         vec_dict = self._getCatVectors(X, take_mean)
-        
+        # Possible that for some cat_cols, we do not have
+        #  any vectors. So ignore them
+        print("Checking if vectors exist for all cat cols...")
+        print("May take time...")
+        r = dict()
+        gap = []
+        for i in vec_dict.keys():
+            # Get no of columns of this DataFrame
+            s = vec_dict[i].shape[1]
+            # Should have more than 2 cols besides'target' and i 
+            if s != 2:
+                # We do have vectors for this i
+                r[i] = vec_dict[i]
+            else:
+                # Vectors do not exist for this i
+                # Note it
+                gap.append(i)
+            print(f"Checked for {i}")   
+            
+        # Inform if for some cat col there are no vectors    
+        if len(gap) !=0:
+            print("For these columns we do not have vectors: ", gap)
+            
+        vec_dict = r
+        gc.collect()
         # If tsv files are not to be saved to disk:
         if not saveVectorsToDisk:
             # pop out target col from all data frames
@@ -1829,7 +1827,6 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         if filepath is None:
             filepath = self.pathToStoreProgress
 
-        
         # DataFrame to hold meta data
         vec_meta = pd.DataFrame(columns=["label","color"])
         
@@ -1874,7 +1871,6 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         #  return the dict, should ever debugging be needed.
         return vec_dict
         
-      
         
         # Networkx graph visualizaton:
         # https://stackoverflow.com/q/57696572/3282777   
@@ -2003,4 +1999,47 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
        
 
 
-####################################3333
+############################
+# https://stackoverflow.com/a/60186800/3282777
+class FeatureTransformer:
+    
+    def __init__(self, categorical_features):
+        self.categorical_features = categorical_features
+        
+    def fit(self, X):
+
+        if not isinstance(X, pd.DataFrame):
+            raise ValueError("Pass a pandas.DataFrame")
+            
+        if not isinstance(self.categorical_features, list):
+            raise ValueError(
+                "Pass categorical_features as a list of column names")
+                    
+        self.encoding = {}
+        for c in self.categorical_features:
+
+            _, int_id = X[c].factorize()
+            self.encoding[c] = dict(zip(list(int_id), range(1,len(int_id)+1)))
+            
+        return self
+
+    def transform(self, X, onehot=True):
+
+        if not isinstance(X, pd.DataFrame):
+            raise ValueError("Pass a pandas.DataFrame")
+
+        if not hasattr(self, 'encoding'):
+            raise AttributeError("FeatureTransformer must be fitted")
+            
+        df = X.drop(self.categorical_features, axis=1)
+        
+        if onehot:  # one-hot encoding
+            for c in sorted(self.categorical_features):            
+                categories = X[c].map(self.encoding[c]).values
+                for val in self.encoding[c].values():
+                    df["{}_{}".format(c,val)] = (categories == val).astype('int16')
+        else:       # label encoding
+            for c in sorted(self.categorical_features):
+                df[c] = X[c].map(self.encoding[c]).fillna(0)
+            
+        return df
