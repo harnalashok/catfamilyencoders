@@ -1,18 +1,15 @@
 # 25th May, 2023
 """
-https://stackoverflow.com/a/30267328
-https://stackoverflow.com/a/5551499
-https://stackoverflow.com/a/27928411
-https://stackoverflow.com/a/27975633
-https://stackoverflow.com/a/67453488
-https://github.com/scikit-learn/scikit-learn/blob/9aaed4987/sklearn/tree/_classes.py#L595
-
-https://github.com/scikit-learn-contrib/project-template
-https://scikit-learn.org/stable/developers/utilities.html#validation-tools
-
-https://scikit-learn.org/stable/auto_examples/cluster/plot_inductive_clustering.html#sphx-glr-auto-examples-cluster-plot-inductive-clustering-py
-
-
+References:
+Coding standard:
+    https://gist.github.com/nateGeorge/5455d2c57fb33c1ae04706f2dc4fee01
+    
+Developing sklearn estimators:
+    https://scikit-learn.org/stable/developers/develop.html 
+    
+Project template:
+    https://github.com/scikit-learn-contrib/project-template/    
+    
 """
 
 
@@ -48,7 +45,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
     def __init__(self,  pathToStoreProgress = None, modelsPath= None,
                  cMeasures=[1,1,1,0,None,1,1],  noOfColsToConcat = 2, 
                  k = None, n_iter = 1, sampsize= 0.8, avg = True,
-                 saveGraph = False, cutoff = 10, verbose = 3):
+                 saveGraph = False, cutoff = 10, verbose = 3, random_state = None):
         """
 
         Parameters
@@ -115,6 +112,11 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
                     
         verbose : int; Intensity of msgs to be displayed. Presently, this parameter may not 
                   display much control over display of msg(s). The default is 3.
+        
+        random_state: int; Controls the shuffling applied to the data before applying the 
+                      train_test_split. Pass an int for reproducible output across multiple 
+                      function calls.
+                  
 
         Returns
         -------
@@ -137,6 +139,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         self.saveGraph = saveGraph  # Should graph objects be saved for later plotting
         self.cutoff = cutoff
         self.verbose = verbose  # Presently unused
+        self.random_state = random_state
 
 
     
@@ -1552,7 +1555,8 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         """
         _,X_test,_,_ = train_test_split(df,y, 
                                         test_size = self.sampsize,
-                                        stratify = y)
+                                        stratify = y,
+                                        random_state = self.random_state)
         
         return X_test
     
