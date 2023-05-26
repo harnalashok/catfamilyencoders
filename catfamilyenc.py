@@ -42,7 +42,7 @@ import re, time,gc
 
 class CatFamilyEncoder(BaseEstimator, TransformerMixin):
     """A class to encode categorical features in multiple but related 
-    ways using network analysis. Together the family of multiple encodings
+    ways using network analysis. Together, the family of multiple encodings
     serve as a numerical vector for every level of a categorical feature.
  
     The class transforms a group of categorical features into corresponding
@@ -445,7 +445,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         ----------
             
         Given a dataframe, df, and a list of categorical
-        columns (cat_cols), this function creates all
+        columns (cat_cols), this method creates all
         combinations (not permutations) of supplied columns in pair
         of two). It then creates new columns in 'df' as
         concatenation of each pair. The resulting dataframe is
@@ -483,7 +483,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         ----
             
         Given a list of columnnames (colNamesList), the
-        function creates tuples after permuting column names
+        method creates tuples after permuting column names
         'n' at a time. Presently n = 2 is only supported.
 
         Example: 
@@ -569,7 +569,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         Desc
         ----
     
-        The function invokes function _featureEngTrainTest() to transform train
+        The method invokes method _featureEngTrainTest() to transform train
         cat features to dense vectors (float). 
         
         Parameters
@@ -672,7 +672,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         
         Desc
         -----    
-        The function calls _learn() to learn a model from 'train'. It then 
+        The method calls _learn() to learn a model from 'train'. It then 
         calls _storeModel() or _storeModelComm() to save it for subsequent
         use.
         
@@ -955,12 +955,11 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
             _genModel(). And _genModel() calls _calCentralityMeasures() &
             _calCommunities() to generate and store models.
     
-            The function transforms the bipartite network to unipartite network.
+            The method transforms the bipartite network to unipartite network.
             Builds a 'model' object of centrality measures. To know more about
             the 'model' object, see help under _genModel().
-            The function also stores our graph related performance data
-            in file "networkPerformanceData.csv". This file is to be created
-            by the application that imports functions from network_features module.
+            The method also stores our graph related performance data
+            in file "networkPerformanceData.csv". 
     
         """
     
@@ -1089,7 +1088,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         Our terminlogy for the two types of node-sets are: colToProject &
         intermediaryCol. After the projection only nodes of colToProject are
         preserved and edges between them are created as mentioned before.
-        The function projects a bipartite 'bi_network' to unipartite network.
+        The method projects a bipartite 'bi_network' to unipartite network.
         colToProject nodes are projected. Unipartite network has only
         df[colToProject] nodes. The operation is time consuming as also
         RAM consuming.
@@ -1185,7 +1184,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         
         Desc
         -----    
-        Given a unipartite undirected network, the function
+        Given a unipartite undirected network, the method
         calculates centrality measures per node. Measures
         calculated are: degree, eigenvector, pagerank, betweenness,
         Clustering coefficient and others. Instead of clustering coef
@@ -1268,7 +1267,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         Desc
         -----
     
-        The function locates communities in the unipartite network
+        The method locates communities in the unipartite network
         and also calculates two community related measures: density and
         avg_embeddedness. It returns 3-dictionaries. The first dict indicates 
         which node falls in which community. The other two dictionaries 
@@ -1370,7 +1369,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         Explanation
         -----------
     
-                      This function reads all dictionaries or *.pkl files saved on disk.
+                      This method reads all dictionaries or *.pkl files saved on disk.
                       in folder modelsPath.  
                       When n_iter > 1, fFor every, colToProject, it averages 
                       out all encoded values (created iteration-by-iteration) and then merges
@@ -1408,7 +1407,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         Column name 9543_2 means this model was created on IInd iteration.
         This file contains models from six iterations.
         Dataframe index name 'app' is 'colToProject'.
-        The function takes row-wise averages resulting in one column. The averaged
+        The method takes row-wise averages resulting in one column. The averaged
         column is named as deg_app_ck_app_p_channel. Index, 'app' is also made a col
         We now have a dataFrame of two columns that maps colToProject ('app')
         to 'degree' values (deg_app_ck_app_p_channel).
@@ -1532,7 +1531,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         
         Desc
         ----
-        The function changes data types from float64 to float32
+        The method changes data types from float64 to float32
         of all features of DataFrame, data, from 
         column index: 'fromIndex'
 
@@ -1637,7 +1636,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
             through our model formation process. We now intend to get dense
             vectors for each one of these cat features.
             What columns constitute dense vectors for each cat?
-            The function returns lists of cols that constitute dense vectors
+            The method returns lists of cols that constitute dense vectors
             for each one of cat cols, such as: app, ip etc
             For example, cols related to app could be:
             ['deg_app_ck_channel', 'deg_app_ck_device', 'deg_app_ck_ip', 'deg_app_ck_os'...]   
