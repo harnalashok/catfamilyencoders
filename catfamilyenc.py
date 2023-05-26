@@ -1,4 +1,4 @@
-# 25th May, 2023
+# 27th May, 2023
 """
 References:
 Coding standard:
@@ -41,6 +41,26 @@ import re, time,gc
 
 
 class CatFamilyEncoder(BaseEstimator, TransformerMixin):
+    """A class to encode categorical features in multiple but related 
+    ways using network analysis. Together the family of multiple encodings
+    serve as a numerical vector for every level of a categorical feature.
+ 
+    The class transforms a group of categorical features into corresponding
+    numerical features which can then be used either in unsupervised learning 
+    or predictive analytics. To assist in unsupervised learning, the class
+    has methods to save a categorical feature as network graphs and plot them.
+    
+    The class has methods to extract unit vectors (numerical) for every 
+    level of a categorical feature to help, for example, in understanding
+    relationshsips between various levels. Extracted numerical vectors
+    can directly be used in plotting for example in tensorflow's Embedding 
+    Projector.
+    
+    As the encodings are calculated using a group of network analysis operations,
+    the family of encodings is extensible. The class provides a one way, but a 
+    limited one to extend it.
+    
+    """
     
     def __init__(self,  pathToStoreProgress = None, modelsPath= None,
                  cMeasures=[1,1,1,0,None,1,1],  noOfColsToConcat = 2, 
