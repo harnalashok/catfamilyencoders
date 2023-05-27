@@ -57,7 +57,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
     Projector.
     
     As the encodings are calculated using a group of network analysis operations,
-    the family of encodings is extensible. The class provides a one way, but a 
+    the family of encodings is extensible. The class provides one way, but a 
     limited one to extend it.
     
     """
