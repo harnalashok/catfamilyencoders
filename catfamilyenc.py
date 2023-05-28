@@ -1,4 +1,4 @@
-# 27th May, 2023
+# 28th May, 2023
 """
 References:
 Coding standard:
@@ -29,6 +29,8 @@ from cdlib import algorithms, evaluation
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import normalize
+
+from sklearn.impute import SimpleImputer
 
 # 1.03 Misc
 from datetime import datetime
@@ -365,9 +367,12 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        X : Transformed DataFrame with original columns
+        X : Transformed DataFrame along with original cat columns.
 
         """
+        # Make a copy so as not to change
+        #  orig data
+        X = X.copy()
         
         if not hasattr(self, 'encoding_'):
             raise AttributeError("catEncoder must be fitted")
@@ -388,15 +393,15 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
             print("Aborting transform..")
             return
              
-        X1 = self._loadStoredModels(X, avg = self.avg)
+        X = self._loadStoredModels(X, avg = self.avg)
          
         if self.new_cols_ is not None:
-            X1 = X1.drop(columns = self.new_cols_)
+            X = X.drop(columns = self.new_cols_)
          
         # Change data type from float64 to float32
         # of only additional columns
-        X1 = self._reduceMemUsage(X, fromIndex=ncols)
-        return X1
+        X = self._reduceMemUsage(X, fromIndex=ncols)
+        return X
    
     
    
@@ -1696,8 +1701,21 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
             cols and optionaly original ones (as in cat_cols).
         take_mean: boolean. As a level value may be occurring many
                    times under a cat col(say, 'app'), to create a final
-                   vector should a mean of all vectors for that level value
+                   vector should a mean of all vectors for each level 
                    be taken or not. Default is False.
+                   
+                   Example:
+                       
+                       app  deg_..   pr_...   eig_...
+                      213   0.10     0.20     0.11
+                      214   0.45     0.18     0.22
+                      ...   ...      ...      ...
+                      ...   ...      ...      ... 
+                      213   0.101    0.20     0.10
+                      ...   ...      ...      ... 
+                      
+                  If take_mean is True, a final vector for each level 
+                  of 'app' (213) would be calculated by taking mean. 
     
         Returns
         -------
@@ -1751,7 +1769,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
     
         
     
-    def vectorsToTSV(self,X, take_mean = False, saveVectorsToDisk = True, filepath = None ):
+    def vectorsToTSV(self,X, take_mean = False, saveVectorsToDisk = True, filepath = None, impute = False):
         """
         Calls: _getCatVectors()
         Called by: main() when needed
@@ -1787,19 +1805,24 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
             should also contain target column with name as 'target'.
             
         take_mean: boolean. For details, see help under _getCatVectors(). 
-                   Default is False. If False, then the meta tsv file also 
-                   has a second column, 'color', having 'target' column 
-                   values for coloring points in the Embeddinng Projector.
+                   If False, then the meta tsv file also has a second 
+                   column, 'color', having 'target' column values for 
+                   coloring points in the Embeddinng Projector.
+                   Default is False. 
                    
-        saveVectorsToDisk: boolean; Save tsv files to disk?           
+        saveVectorsToDisk: boolean; Save tsv files to disk?  Default is True.          
 
         filepath : string; Folder where two tsv files corresponding to each 
-                   cat column will be saved
+                   cat column will be saved. If None, it is pathToStoreProgress.
+                   Default is None.
+        
+        impute: boolean; Imputes X with median strategy and outputs impute model
+                for future use. If False,           
 
         Returns
         -------
-        A dictionary with keys as cat cols and values as corresponding 
-        DataFrames.
+        Outputs two objects: One, a dictionary with keys as cat cols and values as corresponding 
+        DataFrames and the other an Impute model (or None).
 
         """
         # Check if X has a 'target' column
@@ -1807,6 +1830,13 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         
         if not 'target' in j:
             raise ValueError("Passed DataFrame does not contain 'target' column even if dummy!")
+            
+        if impute:
+            si = SimpleImputer(strategy = 'median')
+            # Remember X also has target column
+            X[:] = si.fit_transform(X)  
+        else:
+            si = None
             
         vec_dict = self._getCatVectors(X, take_mean)
         # Possible that for some cat_cols, we do not have
@@ -1845,7 +1875,7 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
                 d = normalize(vec_dict[i])  
                 # 'd' being np.array(), convert back to DataFrame
                 vec_dict[i] = pd.DataFrame(d,columns = colnames)
-            return vec_dict
+            return vec_dict, si
         
         if filepath is None:
             filepath = self.pathToStoreProgress
@@ -1890,10 +1920,10 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         print("Load these file-pairs in tensorflow's 'Embedding Projector'")
         print("It helps in visualizing interrelationships among levels of a categorical feature")
         
-        # Even though, we do not need to return the following
-        #  return the dict, should ever debugging be needed.
-        return vec_dict
+        # Return the dict, and impute model used
+        return vec_dict, si
         
+    
         
         # Networkx graph visualizaton:
         # https://stackoverflow.com/q/57696572/3282777   
