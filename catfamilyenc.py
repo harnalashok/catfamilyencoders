@@ -388,15 +388,15 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
             print("Aborting transform..")
             return
              
-        X = self._loadStoredModels(X, avg = self.avg)
+        X1 = self._loadStoredModels(X, avg = self.avg)
          
         if self.new_cols_ is not None:
-            X = X.drop(columns = self.new_cols_)
+            X1 = X1.drop(columns = self.new_cols_)
          
         # Change data type from float64 to float32
         # of only additional columns
-        X = self._reduceMemUsage(X, fromIndex=ncols)
-        return X
+        X1 = self._reduceMemUsage(X, fromIndex=ncols)
+        return X1
    
     
    
