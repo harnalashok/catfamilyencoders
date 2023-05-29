@@ -1,4 +1,4 @@
-# 28th May, 2023
+# 30th May, 2023
 """
 References:
 Coding standard:
@@ -309,9 +309,10 @@ class CatFamilyEncoder(BaseEstimator, TransformerMixin):
         # Check cat_cols names. These must not contain
         # any char other than a-zA-Z. Else, exception 
         # is raised
-        a = [not i.isalpha()  for i in self.cat_cols]
+        # https://stackoverflow.com/a/336220/3282777
+        a = [not re.search("^[a-zA-Z_]+$", i)  for i in self.cat_cols]
         if (sum(a) > 0) :
-            raise Exception("Column names in cat_cols/data must be alphabets. No underscore or digit etc allowed")
+            raise Exception("Column names in cat_cols/data must be alphabets and may have underscore. No other char or digit etc allowed")
 
         msg = "No of interactingCatCols can not exceed cat_cols"
         assert (len(self.interactingCatCols) < len(self.cat_cols)) or (len(self.interactingCatCols) == len(self.cat_cols)), msg 
